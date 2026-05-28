@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: pinokiox-frontend
+    runtime: static
+    buildCommand: pnpm install && pnpm build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: "http://localhost:8000"
+      - key: VITE_USE_MOCK
+        value: "true"
+      - key: VITE_MOCK_DELAY
+        value: "true"
+      - key: VITE_SHOW_DEBUG
+        value: "false"

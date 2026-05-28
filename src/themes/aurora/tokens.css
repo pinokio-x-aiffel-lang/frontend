@@ -1,0 +1,289 @@
+/**
+ * Aurora theme — trendy dark mode with glassmorphism + aurora gradient.
+ *   - Deep blue-black canvas, glass surfaces (translucent + blur)
+ *   - Violet→Cyan aurora gradient accent, glow on interactions
+ *   - Space Grotesk (display) / Inter (body) / JetBrains Mono (code)
+ */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+[data-theme='aurora'] {
+  /* ── Canvas & surfaces (dark) ─────────────────────────────── */
+  --au-bg: #0a0a0f;
+  --au-bg-elev: #101018;
+  --au-surface: rgba(255, 255, 255, 0.04);
+  --au-surface-2: rgba(255, 255, 255, 0.07);
+  --au-surface-solid: #14141d;
+  --au-nav-bg: rgba(10, 10, 15, 0.6);
+
+  /* ── Borders (low-opacity white) ──────────────────────────── */
+  --au-border: rgba(255, 255, 255, 0.09);
+  --au-border-strong: rgba(255, 255, 255, 0.18);
+
+  /* ── Text ─────────────────────────────────────────────────── */
+  --au-text: #f5f5fa;
+  --au-text-secondary: #aeaec4;
+  --au-text-muted: #7a7a92;
+  --au-text-faint: #56566a;
+  --au-text-inverse: #0a0a0f;
+
+  /* ── Accent — violet → cyan aurora ────────────────────────── */
+  --au-violet: #8b5cf6;
+  --au-violet-bright: #a78bfa;
+  --au-cyan: #22d3ee;
+  --au-grad: linear-gradient(120deg, #a78bfa 0%, #8b5cf6 40%, #22d3ee 100%);
+  --au-grad-soft: linear-gradient(120deg, rgba(167, 139, 250, 0.18), rgba(34, 211, 238, 0.18));
+  --au-on-accent: #0a0a0f;
+  --au-accent-tint: rgba(139, 92, 246, 0.14);
+  --au-accent-glow: 0 0 14px rgba(139, 92, 246, 0.55);
+
+  /* ── Glow shadows ─────────────────────────────────────────── */
+  --au-glow-violet: 0 0 0 1px rgba(139, 92, 246, 0.5), 0 8px 32px rgba(139, 92, 246, 0.28);
+  --au-glow-focus: 0 0 0 3px rgba(139, 92, 246, 0.28);
+  --au-shadow-card: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 8px 32px rgba(0, 0, 0, 0.4);
+  --au-shadow-elevated: 0 1px 0 0 rgba(255, 255, 255, 0.06) inset, 0 16px 48px rgba(0, 0, 0, 0.55);
+
+  /* ── Semantic / verdict (vivid for dark) ──────────────────── */
+  --au-verdict-true: #34d399;
+  --au-verdict-true-bg: rgba(52, 211, 153, 0.12);
+  --au-verdict-false: #fb7185;
+  --au-verdict-false-bg: rgba(251, 113, 133, 0.12);
+  --au-verdict-mislead: #fbbf24;
+  --au-verdict-mislead-bg: rgba(251, 191, 36, 0.12);
+  --au-verdict-nei: #94a3b8;
+  --au-verdict-nei-bg: rgba(148, 163, 184, 0.12);
+
+  --au-error: #fb7185;
+  --au-error-bg: rgba(251, 113, 133, 0.1);
+
+  /* ── Typography ───────────────────────────────────────────── */
+  --au-font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --au-font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --au-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --au-text-display: clamp(2.75rem, 1rem + 6vw, 5rem);
+  --au-text-headline: clamp(2rem, 1rem + 3vw, 3rem);
+  --au-text-section: 2rem;
+  --au-text-subhead: 1.5rem;
+  --au-text-body-lg: 1.0625rem;
+  --au-text-body: 0.9375rem;
+  --au-text-small: 0.8125rem;
+  --au-text-caption: 0.75rem;
+  --au-text-overline: 0.6875rem;
+
+  /* ── Radius ───────────────────────────────────────────────── */
+  --au-radius-sm: 8px;
+  --au-radius: 12px;
+  --au-radius-lg: 18px;
+  --au-radius-xl: 24px;
+  --au-radius-full: 9999px;
+
+  /* ── Layout ───────────────────────────────────────────────── */
+  --au-max-width: 1140px;
+  --au-max-width-narrow: 760px;
+
+  /* ── Motion ───────────────────────────────────────────────── */
+  --au-duration: 220ms;
+  --au-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ════════════════════════════════════════════════════════════
+ *  LIGHT MODE — same structure, voicebox-inspired palette
+ *  (warm white canvas · near-black text · red accent)
+ *  컴포넌트는 --au-* 변수만 참조하므로 색만 오버라이드한다.
+ * ════════════════════════════════════════════════════════════ */
+[data-theme='aurora'][data-mode='light'] {
+  /* Canvas & surfaces */
+  --au-bg: #fafafa;
+  --au-bg-elev: #ffffff;
+  --au-surface: rgba(255, 255, 255, 0.72);
+  --au-surface-2: rgba(10, 10, 10, 0.04);
+  --au-surface-solid: #ffffff;
+  --au-nav-bg: rgba(250, 250, 250, 0.78);
+
+  /* Borders */
+  --au-border: rgba(10, 10, 10, 0.10);
+  --au-border-strong: rgba(10, 10, 10, 0.20);
+
+  /* Text */
+  --au-text: #0a0a0a;
+  --au-text-secondary: #525252;
+  --au-text-muted: #828387;
+  --au-text-faint: #a3a3a3;
+  --au-text-inverse: #fafafa;
+
+  /* Accent — red (voicebox scalpel) as a soft gradient */
+  --au-violet: #ef4444;
+  --au-violet-bright: #dc2626;
+  --au-cyan: #b91c1c;
+  --au-grad: linear-gradient(120deg, #ff6b6b 0%, #ef4444 50%, #dc2626 100%);
+  --au-grad-soft: linear-gradient(120deg, rgba(239, 68, 68, 0.10), rgba(220, 38, 38, 0.08));
+  --au-on-accent: #ffffff;
+  --au-accent-tint: rgba(239, 68, 68, 0.10);
+  --au-accent-glow: 0 0 14px rgba(239, 68, 68, 0.30);
+
+  /* Glow / shadows — softer, no neon */
+  --au-glow-violet: 0 0 0 1px rgba(239, 68, 68, 0.4), 0 8px 28px rgba(239, 68, 68, 0.20);
+  --au-glow-focus: 0 0 0 3px rgba(239, 68, 68, 0.20);
+  --au-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  --au-shadow-elevated: 0 1px 2px rgba(0, 0, 0, 0.05), 0 16px 40px rgba(0, 0, 0, 0.10);
+
+  /* Verdict (readable on white) */
+  --au-verdict-true: #16a34a;
+  --au-verdict-true-bg: rgba(22, 163, 74, 0.10);
+  --au-verdict-false: #ef4444;
+  --au-verdict-false-bg: rgba(239, 68, 68, 0.10);
+  --au-verdict-mislead: #ca8a04;
+  --au-verdict-mislead-bg: rgba(202, 138, 4, 0.12);
+  --au-verdict-nei: #64748b;
+  --au-verdict-nei-bg: rgba(100, 116, 139, 0.10);
+
+  --au-error: #ef4444;
+  --au-error-bg: rgba(239, 68, 68, 0.08);
+}
+
+[data-theme='aurora'][data-mode='light'] .au-aurora {
+  background:
+    radial-gradient(ellipse 50% 60% at 15% 0%, rgba(239, 68, 68, 0.12), transparent 60%),
+    radial-gradient(ellipse 50% 60% at 85% 10%, rgba(255, 141, 161, 0.14), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 50% -10%, rgba(220, 38, 38, 0.08), transparent 70%);
+  filter: none;
+}
+
+[data-theme='aurora'][data-mode='light'] ::selection {
+  background: rgba(239, 68, 68, 0.22);
+  color: #0a0a0a;
+}
+
+/* ── Base ──────────────────────────────────────────────────── */
+[data-theme='aurora'] body,
+[data-theme='aurora'] .theme-root {
+  font-family: var(--au-font-body);
+  font-size: var(--au-text-body);
+  line-height: 1.55;
+  color: var(--au-text-secondary);
+  background: var(--au-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+[data-theme='aurora'] h1,
+[data-theme='aurora'] h2,
+[data-theme='aurora'] h3,
+[data-theme='aurora'] h4 {
+  font-family: var(--au-font-display);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  color: var(--au-text);
+  margin: 0;
+  text-wrap: balance;
+}
+
+[data-theme='aurora'] p {
+  text-wrap: pretty;
+}
+
+[data-theme='aurora'] code,
+[data-theme='aurora'] kbd,
+[data-theme='aurora'] pre {
+  font-family: var(--au-font-mono);
+  font-size: 0.875em;
+}
+
+[data-theme='aurora'] a {
+  color: var(--au-violet-bright);
+  text-decoration: none;
+  transition: color var(--au-duration) var(--au-ease);
+}
+
+[data-theme='aurora'] a:hover {
+  color: var(--au-cyan);
+}
+
+[data-theme='aurora'] :focus-visible {
+  outline: none;
+  box-shadow: var(--au-glow-focus);
+  border-radius: var(--au-radius-sm);
+}
+
+[data-theme='aurora'] ::selection {
+  background: rgba(139, 92, 246, 0.35);
+  color: #fff;
+}
+
+/* ── Utility classes ───────────────────────────────────────── */
+[data-theme='aurora'] .au-num {
+  font-variant-numeric: tabular-nums;
+}
+
+[data-theme='aurora'] .au-overline {
+  font-family: var(--au-font-mono);
+  font-size: var(--au-text-overline);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--au-text-muted);
+}
+
+[data-theme='aurora'] .au-grad-text {
+  background: var(--au-grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+[data-theme='aurora'] .au-divider {
+  height: 1px;
+  background: var(--au-border);
+  border: 0;
+  margin: 0;
+}
+
+/* Glass card */
+[data-theme='aurora'] .au-card {
+  background: var(--au-surface);
+  border: 1px solid var(--au-border);
+  border-radius: var(--au-radius-lg);
+  box-shadow: var(--au-shadow-card);
+  transition:
+    transform var(--au-duration) var(--au-ease),
+    border-color var(--au-duration) var(--au-ease),
+    box-shadow var(--au-duration) var(--au-ease);
+}
+
+[data-theme='aurora'] .au-card-hoverable:hover {
+  transform: translateY(-2px);
+  border-color: var(--au-border-strong);
+  box-shadow: var(--au-shadow-elevated);
+}
+
+/* Aurora mesh background for hero */
+[data-theme='aurora'] .au-aurora {
+  background:
+    radial-gradient(ellipse 50% 60% at 15% 0%, rgba(139, 92, 246, 0.28), transparent 60%),
+    radial-gradient(ellipse 50% 60% at 85% 10%, rgba(34, 211, 238, 0.2), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 50% -10%, rgba(167, 139, 250, 0.16), transparent 70%);
+  filter: saturate(120%);
+}
+
+/* Animations */
+@keyframes au-spin { to { transform: rotate(360deg); } }
+
+@keyframes au-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+@keyframes au-shimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme='aurora'] * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
