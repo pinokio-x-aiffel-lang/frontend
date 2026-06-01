@@ -64,6 +64,11 @@ export default function AuroraApp() {
     void sse.verify(req)
   }
 
+  // 'Tip' 글자 클릭 → 동일한 SSE 파이프라인을 dummy 엔드포인트(/dummy)로 실행
+  function handleTip(content: string) {
+    void sse.verify({ content }, { path: 'dummy' })
+  }
+
   function handleReset() {
     sse.reset()
   }
@@ -209,7 +214,7 @@ export default function AuroraApp() {
                 </p>
 
                 <div style={{ maxWidth: 720 }}>
-                  <InputForm onSubmit={handleSubmit} isLoading={false} />
+                  <InputForm onSubmit={handleSubmit} onTipClick={handleTip} isLoading={false} />
                 </div>
               </div>
             </section>
@@ -303,7 +308,7 @@ export default function AuroraApp() {
                 {sse.errorMsg ?? '알 수 없는 문제가 생겼어요'} — 입력을 확인하거나 잠시 후 다시 시도해 주세요.
               </p>
             </div>
-            <InputForm onSubmit={handleSubmit} isLoading={false} />
+            <InputForm onSubmit={handleSubmit} onTipClick={handleTip} isLoading={false} />
           </section>
         )}
       </main>

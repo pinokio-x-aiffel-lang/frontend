@@ -12,7 +12,8 @@ export function useVerifySSE() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const esRef = useRef<EventSource | null>(null)
 
-  async function verify(req: VerifyRequest) {
+  async function verify(req: VerifyRequest, opts?: { path?: string }) {
+    const path = opts?.path ?? 'verify'
     esRef.current?.close()
 
     setStatus('loading')
@@ -22,7 +23,7 @@ export function useVerifySSE() {
 
     let job_id: string
     try {
-      const res = await fetch(`${BASE_URL}/verify`, {
+      const res = await fetch(`${BASE_URL}/${path}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
         body: JSON.stringify({ content: req.content }),
@@ -38,7 +39,7 @@ export function useVerifySSE() {
       return
     }
 
-    const es = new EventSource(`${BASE_URL}/verify/stream?job_id=${job_id}`)
+    const es = new EventSource(`${BASE_URL}/${path}/stream?job_id=${job_id}`)
     esRef.current = es
 
     es.addEventListener('step', (e) => {

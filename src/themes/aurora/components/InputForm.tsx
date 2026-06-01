@@ -4,9 +4,11 @@ import { verifyRequestSchema, type VerifyRequest } from '@/lib/api/schema'
 interface InputFormProps {
   onSubmit: (req: VerifyRequest) => void
   isLoading: boolean
+  /** 'Tip' 글자 클릭 시 호출 — 현재 입력값을 그대로 넘긴다 (dummy API 테스트용) */
+  onTipClick?: (content: string) => void
 }
 
-export function InputForm({ onSubmit, isLoading }: InputFormProps) {
+export function InputForm({ onSubmit, isLoading, onTipClick }: InputFormProps) {
   const [content, setContent] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [focused, setFocused] = useState(false)
@@ -114,7 +116,31 @@ export function InputForm({ onSubmit, isLoading }: InputFormProps) {
       )}
 
       <p style={{ marginTop: 16, fontSize: 13, color: 'var(--au-text-muted)', lineHeight: 1.6 }}>
-        <span className="au-overline" style={{ marginRight: 6 }}>Tip</span>
+        <span
+          className="au-overline"
+          role={onTipClick ? 'button' : undefined}
+          tabIndex={onTipClick ? 0 : undefined}
+          onClick={onTipClick ? () => onTipClick(content) : undefined}
+          onKeyDown={
+            onTipClick
+              ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onTipClick(content)
+                  }
+                }
+              : undefined
+          }
+          title={onTipClick ? 'dummy API로 테스트 요청 보내기' : undefined}
+          style={{
+            marginRight: 6,
+            cursor: onTipClick ? 'pointer' : 'default',
+            textDecoration: onTipClick ? 'underline dotted' : 'none',
+            textUnderlineOffset: 3,
+          }}
+        >
+          Tip
+        </span>
         주소인지 본문인지는 알아서 구분해 드려요. 입력값에{' '}
         <code style={tipCodeStyle}>article-2..5</code> 또는{' '}
         <code style={tipCodeStyle}>true</code> /{' '}
