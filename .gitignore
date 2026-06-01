@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+.vite
 *.local
 
 # Env (커밋 금지 — .env.example만 커밋)
@@ -27,3 +28,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Claude Code 로컬 설정
+.claude/settings.local.json

@@ -37,9 +37,9 @@ export type OverallVerdict = z.infer<typeof overallVerdictSchema>
 
 /* ──────────────────────────  Article (메타데이터)  ────────────────────── */
 export const articleSchema = z.object({
-  title: z.string(),
-  source: z.string(),
-  published_at: z.string(),
+  title: z.string().nullable(),
+  source: z.string().nullable(),
+  published_at: z.string().nullable(),
   content: z.string(),
 })
 export type Article = z.infer<typeof articleSchema>

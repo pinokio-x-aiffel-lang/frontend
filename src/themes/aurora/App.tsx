@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useVerifyArticle } from '@/hooks/useVerifyArticle'
-import { usePipelineStepper } from '@/hooks/usePipelineStepper'
+import { useVerifySSE } from '@/hooks/useVerifySSE'
 import { useDebugMode } from '@/shared/useDebugMode'
-import type { VerifyRequest, VerifyResponse } from '@/lib/api/schema'
+import type { VerifyRequest } from '@/lib/api/schema'
 
 import { InputForm } from './components/InputForm'
 import { PipelineProgress } from './components/PipelineProgress'
@@ -10,8 +9,9 @@ import { ResultLayout } from './components/ResultLayout'
 
 import './tokens.css'
 
-type AppState = 'idle' | 'loading' | 'result' | 'error'
 type Mode = 'light' | 'dark'
+
+const TOTAL_STEPS = 9
 
 const MODE_STORAGE_KEY = 'aurora-mode'
 
@@ -35,15 +35,17 @@ const VERDICT_LEGEND = [
 ] as const
 
 export default function AuroraApp() {
-  const [appState, setAppState] = useState<AppState>('idle')
-  const [result, setResult] = useState<VerifyResponse | null>(null)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
-
+  const sse = useVerifySSE()
   const [mode, setMode] = useState<Mode>(getInitialMode)
-
-  const mutation = useVerifyArticle()
-  const currentStep = usePipelineStepper(appState === 'loading')
   const showDebug = useDebugMode()
+
+  const appState = sse.status === 'done' ? 'result' : sse.status === 'error' ? 'error' : sse.status
+
+  const displaySteps = Array.from({ length: TOTAL_STEPS }, (_, i) =>
+    sse.steps[i] ?? { step: i + 1, name: '', status: 'pending' as const, duration_ms: null },
+  )
+  const runningIdx = displaySteps.findIndex((s) => s.status === 'running')
+  const currentStep = runningIdx >= 0 ? runningIdx : displaySteps.filter((s) => s.status === 'done').length
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'aurora')
@@ -59,20 +61,11 @@ export default function AuroraApp() {
   }, [mode])
 
   function handleSubmit(req: VerifyRequest) {
-    setAppState('loading')
-    setResult(null)
-    setErrorMsg(null)
-    mutation.mutate(req, {
-      onSuccess: (data) => { setResult(data); setAppState('result') },
-      onError: (err) => { setErrorMsg(err.message); setAppState('error') },
-    })
+    void sse.verify(req)
   }
 
   function handleReset() {
-    setAppState('idle')
-    setResult(null)
-    setErrorMsg(null)
-    mutation.reset()
+    sse.reset()
   }
 
   return (
@@ -281,14 +274,14 @@ export default function AuroraApp() {
             <p style={{ color: 'var(--au-text-muted)', fontSize: 14, margin: '0 0 40px' }}>
               통계 자료를 찾아 비교하는 데 보통 10~20초 정도 걸려요.
             </p>
-            <PipelineProgress currentStep={currentStep} />
+            <PipelineProgress currentStep={currentStep} finalSteps={displaySteps} />
           </section>
         )}
 
         {/* ── RESULT ───────────────────────────────────────── */}
-        {appState === 'result' && result && (
+        {appState === 'result' && sse.result && (
           <div style={{ padding: '56px 0 0' }}>
-            <ResultLayout result={result} onReset={handleReset} showDebug={showDebug} />
+            <ResultLayout result={sse.result} onReset={handleReset} showDebug={showDebug} />
           </div>
         )}
 
@@ -307,7 +300,7 @@ export default function AuroraApp() {
               <div className="au-overline" style={{ color: 'var(--au-error)', marginBottom: 8 }}>문제가 생겼어요</div>
               <h2 style={{ fontSize: 'var(--au-text-subhead)', margin: '0 0 6px', color: 'var(--au-error)' }}>확인하지 못했어요</h2>
               <p style={{ margin: 0, color: 'var(--au-text-secondary)', fontSize: 14 }}>
-                {errorMsg ?? '알 수 없는 문제가 생겼어요'} — 입력을 확인하거나 잠시 후 다시 시도해 주세요.
+                {sse.errorMsg ?? '알 수 없는 문제가 생겼어요'} — 입력을 확인하거나 잠시 후 다시 시도해 주세요.
               </p>
             </div>
             <InputForm onSubmit={handleSubmit} isLoading={false} />
