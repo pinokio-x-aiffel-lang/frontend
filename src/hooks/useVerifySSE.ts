@@ -39,7 +39,9 @@ export function useVerifySSE() {
     setResult(null)
     setErrorMsg(null)
 
-    if (USE_MOCK) {
+    // TIP(path='dummy')은 백엔드에 대응 라우트가 없으므로, VITE_USE_MOCK 여부와
+    // 무관하게 항상 클라이언트 mock으로 응답한다. 정상 submit(path='verify')만 실서버를 탄다.
+    if (USE_MOCK || path === 'dummy') {
       await runMock(req, myRun)
       return
     }
