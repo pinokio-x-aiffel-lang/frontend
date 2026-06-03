@@ -64,9 +64,9 @@ export default function AuroraApp() {
     void sse.verify(req)
   }
 
-  // 'Tip' 글자 클릭 → 동일한 SSE 파이프라인을 dummy 엔드포인트(/dummy)로 실행
+  // 'Tip' 글자 클릭 → 항상 클라이언트 mock으로 데모 실행 (서버 호출 없음)
   function handleTip(content: string) {
-    void sse.verify({ content }, { path: 'dummy' })
+    void sse.verify({ content }, { demo: true })
   }
 
   function handleReset() {

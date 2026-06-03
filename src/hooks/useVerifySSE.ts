@@ -29,8 +29,7 @@ export function useVerifySSE() {
   // 이전 mock 실행이 뒤늦게 상태를 덮어쓰는 것을 막는다(mock엔 ES.close가 없음).
   const runIdRef = useRef(0)
 
-  async function verify(req: VerifyRequest, opts?: { path?: string }) {
-    const path = opts?.path ?? 'verify'
+  async function verify(req: VerifyRequest, opts?: { demo?: boolean }) {
     esRef.current?.close()
     const myRun = ++runIdRef.current
 
@@ -39,16 +38,16 @@ export function useVerifySSE() {
     setResult(null)
     setErrorMsg(null)
 
-    // TIP(path='dummy')은 백엔드에 대응 라우트가 없으므로, VITE_USE_MOCK 여부와
-    // 무관하게 항상 클라이언트 mock으로 응답한다. 정상 submit(path='verify')만 실서버를 탄다.
-    if (USE_MOCK || path === 'dummy') {
+    // demo(Tip)는 백엔드에 대응 라우트가 없으므로 VITE_USE_MOCK 여부와 무관하게
+    // 항상 클라이언트 mock으로 응답한다. 정상 submit만 실서버(/verify)를 탄다.
+    if (USE_MOCK || opts?.demo) {
       await runMock(req, myRun)
       return
     }
 
     let job_id: string
     try {
-      const res = await fetch(`${BASE_URL}/${path}`, {
+      const res = await fetch(`${BASE_URL}/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
         body: JSON.stringify({ content: req.content }),
@@ -66,7 +65,7 @@ export function useVerifySSE() {
     }
     if (runIdRef.current !== myRun) return
 
-    const es = new EventSource(`${BASE_URL}/${path}/stream?job_id=${job_id}`)
+    const es = new EventSource(`${BASE_URL}/verify/stream?job_id=${job_id}`)
     esRef.current = es
 
     es.addEventListener('step', (e) => {
