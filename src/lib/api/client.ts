@@ -1,4 +1,5 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+import { BASE_URL } from './config'
+
 const TIMEOUT_MS = 90_000
 
 export class ApiError extends Error {
