@@ -10,7 +10,7 @@ services:
         destination: /index.html
     envVars:
       - key: VITE_API_BASE_URL
-        value: "http://127.0.0.1:8000"
+        value: "https://5320-221-147-34-65.ngrok-free.app"
       - key: VITE_USE_MOCK
         value: "true"
       - key: VITE_MOCK_DELAY
