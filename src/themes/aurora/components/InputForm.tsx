@@ -6,9 +6,11 @@ interface InputFormProps {
   isLoading: boolean
   /** 'Tip' 글자 클릭 시 호출 — 현재 입력값을 그대로 넘긴다 (dummy API 테스트용) */
   onTipClick?: (content: string) => void
+  /** 넘기면 '검증 시작' 왼쪽에 '새 검증'(초기화) 버튼을 노출한다 */
+  onReset?: () => void
 }
 
-export function InputForm({ onSubmit, isLoading, onTipClick }: InputFormProps) {
+export function InputForm({ onSubmit, isLoading, onTipClick, onReset }: InputFormProps) {
   const [content, setContent] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [focused, setFocused] = useState(false)
@@ -85,15 +87,22 @@ export function InputForm({ onSubmit, isLoading, onTipClick }: InputFormProps) {
         >
           {content.trim().length.toLocaleString()} chars
         </span>
-        <button
-          type="submit"
-          disabled={isLoading}
-          style={primaryBtnStyle(isLoading)}
-          onMouseEnter={(e) => { if (!isLoading) e.currentTarget.style.boxShadow = 'var(--au-glow-violet)' }}
-          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none' }}
-        >
-          <SubmitContent isLoading={isLoading} label="검증 시작" />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {onReset && (
+            <button type="button" onClick={onReset} style={resetBtnStyle}>
+              새 검증
+            </button>
+          )}
+          <button
+            type="submit"
+            disabled={isLoading}
+            style={primaryBtnStyle(isLoading)}
+            onMouseEnter={(e) => { if (!isLoading) e.currentTarget.style.boxShadow = 'var(--au-glow-violet)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none' }}
+          >
+            <SubmitContent isLoading={isLoading} label="검증 시작" />
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -173,6 +182,20 @@ function SubmitContent({ isLoading, label }: { isLoading: boolean; label: string
       <span>{label}</span>
     </span>
   )
+}
+
+const resetBtnStyle: CSSProperties = {
+  height: 44,
+  padding: '0 20px',
+  fontFamily: 'var(--au-font-body)',
+  fontSize: 14,
+  fontWeight: 600,
+  color: 'var(--au-text)',
+  background: 'var(--au-surface)',
+  border: '1px solid var(--au-border-strong)',
+  borderRadius: 'var(--au-radius-full)',
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
 }
 
 function primaryBtnStyle(disabled: boolean): CSSProperties {

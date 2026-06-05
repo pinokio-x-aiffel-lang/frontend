@@ -206,6 +206,14 @@
   border-radius: var(--au-radius-sm);
 }
 
+/* 텍스트 입력은 바깥 래퍼(Field/InputForm)가 glow를 담당하므로,
+   안쪽 input/textarea 자체에는 focus glow를 주지 않는다. */
+[data-theme='aurora'] input:focus-visible,
+[data-theme='aurora'] textarea:focus-visible {
+  box-shadow: none;
+  border-radius: inherit;
+}
+
 [data-theme='aurora'] ::selection {
   background: rgba(139, 92, 246, 0.35);
   color: #fff;

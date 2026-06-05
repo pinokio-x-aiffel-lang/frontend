@@ -1,4 +1,5 @@
 import { BASE_URL } from './config'
+import { authHeader } from './token'
 
 const TIMEOUT_MS = 90_000
 
@@ -25,6 +26,7 @@ export async function apiFetch<T>(
       signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
+        ...authHeader(), // 로그인 상태면 Authorization: Bearer <token> 자동 부착
         ...options.headers,
       },
     })

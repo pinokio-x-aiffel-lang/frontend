@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useVerifySSE } from '@/hooks/useVerifySSE'
 import { useDebugMode } from '@/shared/useDebugMode'
+import { getCurrentUser } from '@/lib/api/auth'
 import type { VerifyRequest } from '@/lib/api/schema'
 
 import { InputForm } from './components/InputForm'
@@ -60,7 +61,18 @@ export default function AuroraApp() {
     window.localStorage.setItem(MODE_STORAGE_KEY, mode)
   }, [mode])
 
-  function handleSubmit(req: VerifyRequest) {
+  async function handleSubmit(req: VerifyRequest) {
+    // submit 시점에 로그인 상태 확인 → 미로그인이면 로그인 화면으로 보냄
+    let user
+    try {
+      user = await getCurrentUser()
+    } catch {
+      user = null
+    }
+    if (!user) {
+      window.location.hash = '#login'
+      return
+    }
     void sse.verify(req)
   }
 
@@ -148,24 +160,19 @@ export default function AuroraApp() {
           <nav style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
             <ModeToggle mode={mode} onChange={setMode} />
             <a
-              href="https://kosis.kr"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#login"
               style={{
-                fontFamily: 'var(--au-font-mono)',
+                fontFamily: 'var(--au-font-body)',
                 fontSize: 13,
-                fontWeight: 500,
+                fontWeight: 600,
                 color: 'var(--au-text)',
-                padding: '6px 12px',
+                padding: '6px 14px',
                 border: '1px solid var(--au-border-strong)',
                 borderRadius: 'var(--au-radius-full)',
               }}
             >
-              KOSIS ↗
+              로그인
             </a>
-            {appState !== 'idle' && (
-              <button onClick={handleReset} style={navBtnStyle}>새 검증</button>
-            )}
           </nav>
         </div>
       </header>
@@ -215,6 +222,24 @@ export default function AuroraApp() {
 
                 <div style={{ maxWidth: 720 }}>
                   <InputForm onSubmit={handleSubmit} onTipClick={handleTip} isLoading={false} />
+                  <div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end' }}>
+                    <a
+                      href="https://kosis.kr"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontFamily: 'var(--au-font-mono)',
+                        fontSize: 13,
+                        fontWeight: 500,
+                        color: 'var(--au-text-secondary)',
+                        padding: '6px 12px',
+                        border: '1px solid var(--au-border-strong)',
+                        borderRadius: 'var(--au-radius-full)',
+                      }}
+                    >
+                      KOSIS ↗
+                    </a>
+                  </div>
                 </div>
               </div>
             </section>
@@ -308,7 +333,7 @@ export default function AuroraApp() {
                 {sse.errorMsg ?? '알 수 없는 문제가 생겼어요'} — 입력을 확인하거나 잠시 후 다시 시도해 주세요.
               </p>
             </div>
-            <InputForm onSubmit={handleSubmit} onTipClick={handleTip} isLoading={false} />
+            <InputForm onSubmit={handleSubmit} onTipClick={handleTip} isLoading={false} onReset={handleReset} />
           </section>
         )}
       </main>
@@ -460,14 +485,3 @@ function LogoMark({ size = 28 }: { size?: number }) {
   )
 }
 
-const navBtnStyle: React.CSSProperties = {
-  fontFamily: 'var(--au-font-body)',
-  fontSize: 13,
-  fontWeight: 600,
-  padding: '8px 16px',
-  background: 'var(--au-grad)',
-  color: 'var(--au-on-accent)',
-  border: 0,
-  borderRadius: 'var(--au-radius-full)',
-  cursor: 'pointer',
-}

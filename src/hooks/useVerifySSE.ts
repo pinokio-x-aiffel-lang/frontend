@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import type { PipelineStep, VerifyRequest, VerifyResponse } from '@/lib/api/schema'
 import { BASE_URL } from '@/lib/api/config'
 import { getMockResponse } from '@/lib/api/mock'
+import { authHeader } from '@/lib/api/token'
 
 type Status = 'idle' | 'loading' | 'done' | 'error'
 
@@ -49,12 +50,15 @@ export function useVerifySSE() {
     try {
       const res = await fetch(`${BASE_URL}/verify`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+        // /verify는 로그인 필요(Bearer) — 저장된 토큰을 Authorization 헤더로 부착
+        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', ...authHeader() },
         body: JSON.stringify({ content: req.content }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error((body as { message?: string }).message ?? `서버 오류 (${res.status})`)
+        const b = body as { message?: string; detail?: string }
+        const msg = res.status === 401 ? '로그인이 필요해요.' : b.message ?? b.detail ?? `서버 오류 (${res.status})`
+        throw new Error(msg)
       }
       ;({ job_id } = await res.json())
     } catch (err) {
