@@ -42,7 +42,7 @@ GET  /verify/stream?job_id=...                     → SSE (인증 불필요)
 
 1. **🔴 JWT 시크릿 교체** — `src/config.py`의 `jwt_secret_key = "change-me-in-production"` 기본값. 운영에서 반드시 env로 강한 값 주입. (안 하면 토큰 위조 가능)
 2. **🔴 `/auth/login` rate limit** — 현재 `/verify`에만 `rate_limit`이 걸려 있어 로그인 무차별 대입(brute-force)에 무방비. 로그인에도 적용 권장.
-3. **🟡 토큰 수명/폐기** — `jwt_expire_days = 7`로 길고 stateless라 폐기 불가. 만료 단축 + `POST /auth/refresh` + 로그아웃 블랙리스트(또는 짧은 access + refresh) 권장.
+3. **🟡 토큰 수명/폐기** — 로그아웃 즉시 폐기는 **denylist로 구현됨(§5)**. 단 ⚠️ **in-memory라 재시작·다중 인스턴스에서 풀림** → Redis 등 영속화 권장. 만료는 여전히 7일(`jwt_expire_days=7`)이고 refresh 없음 → 만료 단축 + refresh 검토.
 4. **🟡 `/auth/me`에 `id` 포함** — 현재 `{ user_id, name }`만 반환. 로그인 응답 user(`{ id, user_id, name }`)와 형태를 통일하면 프론트 처리가 단순해짐. (프론트는 일단 `id` optional로 수용 중)
 5. **🟢 로그인 실패 메시지 문구** — `detail="Incorrect email or password"` 인데 아이디 로그인이므로 "Incorrect **user_id** or password" 등으로. (사용자 열거 방지를 위해 아이디/비번 케이스를 구분하지 않는 현재 동작은 ✅ 유지)
 
@@ -56,10 +56,12 @@ Bearer + localStorage 방식은:
 
 ## 5. 로그아웃 처리 스펙 (백엔드 요청)
 
-### 5-0. 현재 상태 / 문제
+### 5-0. 현재 상태 (✅ 권장안 B 구현됨)
 
-- 프론트 `logout()`은 **클라이언트의 토큰만 제거**(`localStorage`)한다.
-- 백엔드엔 로그아웃 엔드포인트가 없고, JWT가 **stateless + 만료 7일**이라 → 발급된 토큰은 **만료까지 서버에서 계속 유효**하다. (유출 시 7일간 악용 가능, "서버 측 로그아웃"이 불가)
+- 프론트 `logout()`: `clearToken()` **전에** `POST /auth/logout` 호출(토큰을 헤더에 실어 전송) 후 클라 토큰 제거.
+- 백엔드: JWT에 `jti` 추가, `POST /auth/logout`이 `jti`를 in-memory denylist에 등록, `get_current_user`가 매 요청 `is_revoked` 확인 → 폐기된 토큰은 401.
+- 결과: **로그아웃 시 토큰이 서버에서 즉시 무효**(만료 전이라도). 단 denylist가 in-memory라 재시작·다중 인스턴스에서 풀림(5-2 NOTE).
+- 유지/미구현: 만료(`exp`)는 여전히 **7일**, refresh 토큰 없음.
 
 ### 5-1. 권장안 A — 짧은 access + refresh + 로그아웃 시 refresh 폐기  ⭐
 
@@ -72,14 +74,14 @@ Bearer + localStorage 방식은:
   - → 이후 갱신 불가 → access는 짧은 잔여시간 뒤 자연 만료 = 사실상 로그아웃.
   - 즉시 무효화가 필요하면 5-2의 denylist를 access에도 병행.
 
-### 5-2. 권장안 B — denylist (현재 단일 토큰 구조 유지 시 최소 변경)
+### 5-2. 권장안 B — denylist  ✅ 구현됨 (in-memory)
 
-refresh 도입이 부담이면, 단일 access 토큰 + 블랙리스트로 즉시 무효화만 추가.
+단일 access 토큰 + 블랙리스트로 즉시 무효화. **현재 채택·구현된 방식.**
 
-- JWT에 **`jti`(고유 ID) claim 추가** 필요. (현재 payload: `sub`, `name`, `exp` → `jti` 추가)
-- **로그아웃(`POST /auth/logout`)**: 현재 토큰의 `jti`를 **Redis denylist에 저장(TTL = 토큰 잔여 만료시간)**.
-- **인증 의존성(`get_current_user`)**: 토큰 검증 후 `jti`가 denylist에 있으면 거부(401).
-- TTL로 만료된 항목은 자동 정리됨.
+- ✅ JWT에 `jti`(고유 ID) claim 추가 (`src/auth/jwt_handler.py`).
+- ✅ 로그아웃(`POST /auth/logout`)이 토큰의 `jti`를 denylist에 등록(만료시각까지) (`src/auth/router.py`).
+- ✅ `get_current_user`(`src/auth/deps.py`)가 매 요청 `is_revoked(jti)` 확인 → 폐기 토큰은 401 "로그아웃된 토큰입니다".
+- ⚠️ 구현이 **in-memory**(`src/auth/denylist.py`, 프로세스 메모리) → 앱 재시작/재배포 시 사라짐(폐기 풀림), 인스턴스 간 미공유. **Render 무료 플랜은 재시작 잦음.** 영속·공유 필요 시 Redis/Postgres로 `denylist.py`만 교체(인터페이스 동일).
 
 ### 5-3. 엔드포인트 계약 — `POST /auth/logout`
 
@@ -106,15 +108,17 @@ Content-Type: application/json
 - 유저 레코드에 `token_version`(정수) 보관, JWT에 포함.
 - 로그아웃-올 / 비번 변경 시 `token_version`을 +1 → 이전 버전 토큰 전부 무효.
 
-### 5-5. 프론트 연동 (확정되면 반영 예정)
+### 5-5. 프론트 연동  ✅ 반영됨
 
-- `auth.ts`의 `logout()`을 **`POST /auth/logout` 호출 후 클라 토큰 제거**로 변경.
-- 권장안 A 채택 시: `apiFetch` 401 응답에서 자동 `/auth/refresh` 시도하는 인터셉터 추가 가능.
+- ✅ `auth.ts`의 `logout()`: `clearToken()` **전에** `POST /auth/logout` best-effort 호출. `apiFetch`가 헤더를 동기적으로 먼저 읽어 **토큰이 실려 나가므로** 백엔드가 `jti` 폐기에 사용 가능(추가 작업 0).
+- ✅ 폐기/만료 토큰의 401을 로그아웃처럼 처리: `getCurrentUser`→null→`#login`, nav→'로그인', `POST /verify`→"로그인이 필요해요".
+- (권장안 A로 갈 경우) `apiFetch` 401에서 자동 `/auth/refresh` 인터셉터 추가 가능 — 현재 refresh 미도입이라 불필요.
 
-### 5-6. 합의 필요 항목
+### 5-6. 합의/진행 현황
 
-- [ ] 권장안 A(refresh) vs B(denylist) 중 선택
-- [ ] access token 만료시간 (예: 15~30분), refresh 만료시간 (예: 7~14일)
-- [ ] refresh 토큰 전달: 응답 body vs httpOnly 쿠키
-- [ ] JWT에 `jti` / `token_version` claim 추가 여부
-- [ ] `/auth/logout` 멱등·응답 형태(`{ "ok": true }`) 확정
+- [x] 권장안 A(refresh) vs B(denylist) → **B(denylist) 채택**
+- [x] JWT에 `jti` claim 추가 → 완료
+- [x] `/auth/logout` 멱등·응답 형태(`{ "ok": true }`) → 완료
+- [ ] denylist **영속화(Redis/Postgres)** — 운영 신뢰성 위해 권장 (현재 in-memory)
+- [ ] 만료 단축 + refresh 토큰 도입 여부 (현재 7일, refresh 없음)
+- [ ] `token_version`(모든 기기 로그아웃) 도입 여부
