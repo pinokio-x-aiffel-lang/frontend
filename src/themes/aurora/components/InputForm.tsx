@@ -1,5 +1,13 @@
-import { useState, type CSSProperties, type FormEvent } from 'react'
+import { useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 import { verifyRequestSchema, type VerifyRequest } from '@/lib/api/schema'
+
+/** 로그인 왕복 등으로 InputForm이 언마운트돼도 입력 초안을 잠시 보관하는 sessionStorage 키 */
+export const VERIFY_DRAFT_KEY = 'verify-draft'
+
+function readDraft(): string {
+  if (typeof window === 'undefined') return ''
+  return window.sessionStorage.getItem(VERIFY_DRAFT_KEY) ?? ''
+}
 
 interface InputFormProps {
   onSubmit: (req: VerifyRequest) => void
@@ -11,9 +19,14 @@ interface InputFormProps {
 }
 
 export function InputForm({ onSubmit, isLoading, onTipClick, onReset }: InputFormProps) {
-  const [content, setContent] = useState('')
+  const [content, setContent] = useState(readDraft)
   const [error, setError] = useState<string | null>(null)
   const [focused, setFocused] = useState(false)
+
+  // 로그인 왕복 후 복원한 초안은 한 번만 쓰고 비운다 (이후 마운트에서 옛 텍스트가 다시 뜨지 않도록)
+  useEffect(() => {
+    if (typeof window !== 'undefined') window.sessionStorage.removeItem(VERIFY_DRAFT_KEY)
+  }, [])
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()

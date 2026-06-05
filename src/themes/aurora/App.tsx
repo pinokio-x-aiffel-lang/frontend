@@ -4,7 +4,7 @@ import { useDebugMode } from '@/shared/useDebugMode'
 import { getCurrentUser } from '@/lib/api/auth'
 import type { VerifyRequest } from '@/lib/api/schema'
 
-import { InputForm } from './components/InputForm'
+import { InputForm, VERIFY_DRAFT_KEY } from './components/InputForm'
 import { PipelineProgress } from './components/PipelineProgress'
 import { ResultLayout } from './components/ResultLayout'
 
@@ -70,6 +70,8 @@ export default function AuroraApp() {
       user = null
     }
     if (!user) {
+      // 로그인 화면으로 보내기 전에 입력값을 보존 (로그인 후 InputForm이 복원)
+      window.sessionStorage.setItem(VERIFY_DRAFT_KEY, req.content)
       window.location.hash = '#login'
       return
     }
