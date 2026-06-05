@@ -42,13 +42,20 @@ export default function Login() {
       // 토큰은 httpOnly 쿠키로 내려오므로 프론트가 따로 저장하지 않는다. (auth.ts 참고)
       window.location.hash = '' // 메인 화면으로
     } catch (err) {
-      const msg =
-        err instanceof ApiError && err.status === 401
-          ? '아이디 또는 비밀번호가 올바르지 않아요.'
-          : err instanceof Error
-            ? err.message
-            : '로그인 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.'
+      let msg: string
+      if (err instanceof ApiError) {
+        msg =
+          err.status === 401
+            ? '아이디 또는 비밀번호가 올바르지 않아요.'
+            : `로그인 실패 [${err.status}] ${err.message}`
+      } else if (err instanceof Error) {
+        msg = `${err.name}: ${err.message}`
+      } else {
+        msg = '로그인 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.'
+      }
       setServerError(msg)
+      // 콘솔에도 원본 에러를 남겨 상세 진단(스택/네트워크 탭 연계) 가능하게.
+      console.error('[login error]', err)
     } finally {
       setIsLoading(false)
     }

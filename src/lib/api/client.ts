@@ -44,6 +44,16 @@ export async function apiFetch<T>(
         '검증 시간이 초과되었습니다 (90초). 잠시 후 다시 시도하세요.',
       )
     }
+    // fetch 자체가 throw → 응답을 못 받은 네트워크 단계 실패(TypeError: Failed to fetch).
+    // 원인: 잘못된 API 주소 / CORS 차단 / 서버 다운 / HTTPS 혼합콘텐츠 등.
+    // 어떤 주소로 호출하다 실패했는지 함께 노출해 진단을 돕는다.
+    if (err instanceof TypeError) {
+      throw new ApiError(
+        0,
+        `서버 연결 실패 (${err.message}) → 호출 주소: ${BASE_URL}${path} ` +
+          `· 원인 후보: 잘못된 API 주소(VITE_API_BASE_URL 미설정 시 ${BASE_URL}) / CORS 차단 / 서버 다운 / HTTPS 혼합콘텐츠`,
+      )
+    }
     throw err
   } finally {
     clearTimeout(timeoutId)
