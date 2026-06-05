@@ -81,10 +81,13 @@ export async function getCurrentUser(): Promise<User | null> {
 }
 
 /**
- * 로그아웃 — 백엔드에 토큰 폐기(revoke) 엔드포인트가 없고 stateless JWT이므로
- * 클라이언트 토큰만 제거한다. (서버 토큰은 만료까지 유효 — 보안 메모: 만료 단축/
- * refresh·블랙리스트 도입 시 서버 폐기로 강화 권장)
+ * 로그아웃 — 백엔드 `POST /auth/logout` 을 best-effort(멱등, 실패 무시)로 호출한 뒤
+ * 클라이언트 토큰을 제거한다. (stateless JWT 라 서버 측 즉시 폐기는 없음 — 토큰은
+ * 만료까지 유효. denylist 도입 시 강화 가능, auth-spec.md §5-2)
  */
 export function logout(): void {
+  // 서버 로그아웃은 실패해도 무시하고 클라 토큰 제거가 핵심. Authorization 헤더는
+  // apiFetch 안에서 clearToken 전에 동기적으로 읽혀 현재 토큰이 실린다.
+  if (!USE_MOCK) void apiFetch('/auth/logout', { method: 'POST' }).catch(() => {})
   clearToken()
 }
