@@ -51,3 +51,70 @@ GET  /verify/stream?job_id=...                     → SSE (인증 불필요)
 Bearer + localStorage 방식은:
 - ✅ CSRF 무관 (헤더는 자동 전송되지 않음) — 교차 사이트에 적합
 - 🔻 XSS에 토큰 노출 (JS가 읽음) — CSP·`dangerouslySetInnerHTML` 금지 등 XSS 1차 방어가 중요. 토큰 보관을 메모리로 옮기려면 `token.ts`만 수정하면 됨(단 새로고침 시 재로그인/refresh 필요).
+
+---
+
+## 5. 로그아웃 처리 스펙 (백엔드 요청)
+
+### 5-0. 현재 상태 / 문제
+
+- 프론트 `logout()`은 **클라이언트의 토큰만 제거**(`localStorage`)한다.
+- 백엔드엔 로그아웃 엔드포인트가 없고, JWT가 **stateless + 만료 7일**이라 → 발급된 토큰은 **만료까지 서버에서 계속 유효**하다. (유출 시 7일간 악용 가능, "서버 측 로그아웃"이 불가)
+
+### 5-1. 권장안 A — 짧은 access + refresh + 로그아웃 시 refresh 폐기  ⭐
+
+가장 표준적이고 보안/UX 균형이 좋다.
+
+- **로그인(`POST /auth/login`)**: access token(짧게, 예: 15~30분) + refresh token(길게, 예: 7~14일) 발급.
+  - refresh token은 서버 저장(DB/Redis)하고, 가능하면 httpOnly 쿠키로 내려 XSS 노출을 줄임.
+- **갱신(`POST /auth/refresh`)**: 유효한 refresh로 새 access 발급. (refresh 회전(rotation) 권장 — 쓸 때마다 교체)
+- **로그아웃(`POST /auth/logout`)**: 해당 **refresh token을 서버에서 폐기(삭제/revoked 처리)**.
+  - → 이후 갱신 불가 → access는 짧은 잔여시간 뒤 자연 만료 = 사실상 로그아웃.
+  - 즉시 무효화가 필요하면 5-2의 denylist를 access에도 병행.
+
+### 5-2. 권장안 B — denylist (현재 단일 토큰 구조 유지 시 최소 변경)
+
+refresh 도입이 부담이면, 단일 access 토큰 + 블랙리스트로 즉시 무효화만 추가.
+
+- JWT에 **`jti`(고유 ID) claim 추가** 필요. (현재 payload: `sub`, `name`, `exp` → `jti` 추가)
+- **로그아웃(`POST /auth/logout`)**: 현재 토큰의 `jti`를 **Redis denylist에 저장(TTL = 토큰 잔여 만료시간)**.
+- **인증 의존성(`get_current_user`)**: 토큰 검증 후 `jti`가 denylist에 있으면 거부(401).
+- TTL로 만료된 항목은 자동 정리됨.
+
+### 5-3. 엔드포인트 계약 — `POST /auth/logout`
+
+```http
+POST /auth/logout
+Authorization: Bearer <access_token>      # 있으면 검증, 없어도 best-effort 처리
+```
+
+응답:
+```http
+200 OK
+Content-Type: application/json
+{ "ok": true }
+```
++ (refresh를 쿠키로 줬다면) refresh 쿠키 만료: `Set-Cookie: refresh_token=; Max-Age=0; Path=/auth; HttpOnly; Secure; SameSite=None`
+
+요구사항:
+- ⚠️ **204(No Content) 말고 JSON body**(`{ "ok": true }`)로 응답. 프론트 공통 `apiFetch`가 `res.json()`을 호출하므로 빈 본문이면 에러.
+- **멱등(idempotent)**: 토큰이 이미 만료/무효/없어도 **200으로 성공 처리**(로그아웃은 막지 말 것). 즉 이 엔드포인트는 인증 실패를 401로 튕기기보다 best-effort로 폐기하고 200을 권장.
+- CORS: 기존 설정에 `POST /auth/logout` 포함되도록(현재 `allow_methods=["*"]`라 OK), 쿠키 쓰면 `credentials` 동일 적용.
+
+### 5-4. (선택) 모든 기기에서 로그아웃 / 비번 변경 시
+
+- 유저 레코드에 `token_version`(정수) 보관, JWT에 포함.
+- 로그아웃-올 / 비번 변경 시 `token_version`을 +1 → 이전 버전 토큰 전부 무효.
+
+### 5-5. 프론트 연동 (확정되면 반영 예정)
+
+- `auth.ts`의 `logout()`을 **`POST /auth/logout` 호출 후 클라 토큰 제거**로 변경.
+- 권장안 A 채택 시: `apiFetch` 401 응답에서 자동 `/auth/refresh` 시도하는 인터셉터 추가 가능.
+
+### 5-6. 합의 필요 항목
+
+- [ ] 권장안 A(refresh) vs B(denylist) 중 선택
+- [ ] access token 만료시간 (예: 15~30분), refresh 만료시간 (예: 7~14일)
+- [ ] refresh 토큰 전달: 응답 body vs httpOnly 쿠키
+- [ ] JWT에 `jti` / `token_version` claim 추가 여부
+- [ ] `/auth/logout` 멱등·응답 형태(`{ "ok": true }`) 확정

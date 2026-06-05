@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useVerifySSE } from '@/hooks/useVerifySSE'
 import { useDebugMode } from '@/shared/useDebugMode'
-import { getCurrentUser } from '@/lib/api/auth'
+import { getCurrentUser, logout, type User } from '@/lib/api/auth'
+import { getToken } from '@/lib/api/token'
 import type { VerifyRequest } from '@/lib/api/schema'
 
 import { InputForm, VERIFY_DRAFT_KEY } from './components/InputForm'
@@ -39,6 +40,16 @@ export default function AuroraApp() {
   const sse = useVerifySSE()
   const [mode, setMode] = useState<Mode>(getInitialMode)
   const showDebug = useDebugMode()
+  // 로그인 상태. 초기엔 토큰 유무로 낙관적 표시 → 마운트 후 /auth/me로 확정한다.
+  const [user, setUser] = useState<User | null>(() => (getToken() ? { user_id: '' } : null))
+
+  useEffect(() => {
+    let alive = true
+    getCurrentUser()
+      .then((u) => { if (alive) setUser(u) })
+      .catch(() => { if (alive) setUser(null) })
+    return () => { alive = false }
+  }, [])
 
   const appState = sse.status === 'done' ? 'result' : sse.status === 'error' ? 'error' : sse.status
 
@@ -63,19 +74,25 @@ export default function AuroraApp() {
 
   async function handleSubmit(req: VerifyRequest) {
     // submit 시점에 로그인 상태 확인 → 미로그인이면 로그인 화면으로 보냄
-    let user
+    let current: User | null
     try {
-      user = await getCurrentUser()
+      current = await getCurrentUser()
     } catch {
-      user = null
+      current = null
     }
-    if (!user) {
+    setUser(current) // nav 버튼 상태도 동기화
+    if (!current) {
       // 로그인 화면으로 보내기 전에 입력값을 보존 (로그인 후 InputForm이 복원)
       window.sessionStorage.setItem(VERIFY_DRAFT_KEY, req.content)
       window.location.hash = '#login'
       return
     }
     void sse.verify(req)
+  }
+
+  function handleLogout() {
+    logout()        // token.ts의 clearToken() → 저장된 Bearer 토큰 제거
+    setUser(null)   // nav를 '로그인'으로 되돌림
   }
 
   // 'Tip' 글자 클릭 → 항상 클라이언트 mock으로 데모 실행 (서버 호출 없음)
@@ -161,20 +178,15 @@ export default function AuroraApp() {
 
           <nav style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
             <ModeToggle mode={mode} onChange={setMode} />
-            <a
-              href="#login"
-              style={{
-                fontFamily: 'var(--au-font-body)',
-                fontSize: 13,
-                fontWeight: 600,
-                color: 'var(--au-text)',
-                padding: '6px 14px',
-                border: '1px solid var(--au-border-strong)',
-                borderRadius: 'var(--au-radius-full)',
-              }}
-            >
-              로그인
-            </a>
+            {user ? (
+              <button type="button" onClick={handleLogout} style={authBtnStyle}>
+                로그아웃
+              </button>
+            ) : (
+              <a href="#login" style={authBtnStyle}>
+                로그인
+              </a>
+            )}
           </nav>
         </div>
       </header>
@@ -485,5 +497,17 @@ function LogoMark({ size = 28 }: { size?: number }) {
       x
     </span>
   )
+}
+
+const authBtnStyle: React.CSSProperties = {
+  fontFamily: 'var(--au-font-body)',
+  fontSize: 13,
+  fontWeight: 600,
+  color: 'var(--au-text)',
+  padding: '6px 14px',
+  background: 'transparent',
+  border: '1px solid var(--au-border-strong)',
+  borderRadius: 'var(--au-radius-full)',
+  cursor: 'pointer',
 }
 
