@@ -98,6 +98,8 @@ function ArticleHero({
 }) {
   const counts = useMemo(() => countByVerdict(claim_results), [claim_results])
   const contentExcerpt = useMemo(() => excerpt(article.content, 220), [article.content])
+  const isLong = article.content.length > 220
+  const [expanded, setExpanded] = useState(false)
 
   return (
     <section aria-labelledby="article-verdict">
@@ -123,9 +125,20 @@ function ArticleHero({
           <span>·</span>
           <span className="au-num">{formatDate(article.published_at)}</span>
         </div>
-        <p style={{ fontSize: 'var(--au-text-body-lg)', lineHeight: 1.7, margin: 0, color: 'var(--au-text-secondary)' }}>
-          {contentExcerpt}
+        <p style={{ fontSize: 'var(--au-text-body-lg)', lineHeight: 1.7, margin: 0, color: 'var(--au-text-secondary)', whiteSpace: 'pre-wrap' }}>
+          {expanded || !isLong ? article.content : contentExcerpt}
         </p>
+        {isLong && (
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            style={showMoreStyle}
+          >
+            {expanded ? '접기' : '더보기'}
+            <span aria-hidden="true" style={{ fontSize: 9 }}>{expanded ? '▲' : '▼'}</span>
+          </button>
+        )}
       </article>
     </section>
   )
@@ -683,6 +696,24 @@ function DStat({ label, value }: { label: string; value: string }) {
 }
 
 /* ───────────────────── helpers ───────────────────── */
+
+/** 기사 전문 펼침 토글 — 작고 희미하지만 점선 밑줄로 눈에 띄게 */
+const showMoreStyle: CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 5,
+  marginTop: 14,
+  padding: 0,
+  background: 'transparent',
+  border: 0,
+  cursor: 'pointer',
+  fontFamily: 'var(--au-font-mono)',
+  fontSize: 12,
+  letterSpacing: '0.04em',
+  color: 'var(--au-text-muted)',
+  textDecoration: 'underline dotted',
+  textUnderlineOffset: 3,
+}
 
 const backBtnStyle: CSSProperties = {
   display: 'inline-flex',

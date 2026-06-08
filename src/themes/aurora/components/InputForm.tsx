@@ -9,6 +9,10 @@ function readDraft(): string {
   return window.sessionStorage.getItem(VERIFY_DRAFT_KEY) ?? ''
 }
 
+/** 입력창에 기본으로 희미하게 떠 있는 추천 텍스트 — 사용자가 손대지 않고 제출하면 이 문장이 그대로 전송된다 */
+const RECOMMENDED_TEXT =
+  '성장 전망은 한국은행 한국은행과 통계청이 공개하고 있는 경제 지표를 확인하면, 현재 경기 흐름을 파악할 수 있다. 현재 두 기관에서 공개된 정보들을 살펴보면 우리나라 경제가 하강 국면에 있음을 보여 준다. 한국은행은 지난 2월 경제전망보고서를 발표하고, 올해 우리나라 경제성장률 전망치를 기존 1.9%에서 1.5%로 낮췄다. 한국은행은 매년 2·5·8·11월 경제전망보고서를 발표한다. 경제전망보고서는 책 표지의 색깔(남색)을 따서, ‘인디고북(Indigo Book)’이라고도 불린다. 경제 전망 외에도 대내외 경제 여건과 리스크를 분석해 담고 있고, 도널드 트럼프 미국 대통령의 관세 정책 영향과 같은 주요 현안을 다루기도 한다. 경기 상황을 파악하려면 국내 성장률 전망이 이전에 비해 상향 조정됐는지, 하향 조정됐는지를 살펴보자. 올해 성장률 전망치의 경우 작년 5월 이후 줄곧 하향 조정돼 왔다. 과거 30년간 우리나라 경제성장률이 올해 전망치인 1.5%보다 낮았던 때는 1998년 외환 위기, 2009년 글로벌 금융 위기, 2020년 코로나 팬데믹 위기 등이다. 한국은행 경제통계시스템(ecos.bok.or.kr)에 접속하면 각종 경제와 금융 통계들을 확인할 수 있다. 국내총생산(GDP), 물가, 환율, 산업, 가계, 외환보유액, 해외 지표 등이다. 맨 첫 화면 우측 하단에는 금리, 환율, 주가 등 일일 지표가 실시간으로 제공되기 때문에 관련 정보를 한 번에 확인할 때 편하다. 한국은행이 공표하는 주요 통계에 대한 해설이나 공표 일정도 공개돼 있으므로 관심 있는 정보가 있다면 확인해 볼 수 있다.'
+
 interface InputFormProps {
   onSubmit: (req: VerifyRequest) => void
   isLoading: boolean
@@ -19,7 +23,9 @@ interface InputFormProps {
 }
 
 export function InputForm({ onSubmit, isLoading, onTipClick, onReset }: InputFormProps) {
-  const [content, setContent] = useState(readDraft)
+  const [content, setContent] = useState(() => readDraft() || RECOMMENDED_TEXT)
+  // 추천 기본 텍스트를 아직 손대지 않은 상태면 true — 희미하게 표시하고 포커스 시 전체 선택한다
+  const [isDefault, setIsDefault] = useState(() => readDraft().length === 0)
   const [error, setError] = useState<string | null>(null)
   const [focused, setFocused] = useState(false)
 
@@ -41,8 +47,11 @@ export function InputForm({ onSubmit, isLoading, onTipClick, onReset }: InputFor
 
   return (
     <form onSubmit={handleSubmit} noValidate style={{ width: '100%' }}>
-      <label htmlFor="au-content" className="au-overline" style={{ display: 'block', marginBottom: 10 }}>
-        기사 주소 또는 본문
+      <label
+        htmlFor="au-content"
+        style={{ display: 'block', marginBottom: 10, fontSize: 14, fontWeight: 500, lineHeight: 1.5, color: 'var(--au-text-secondary)' }}
+      >
+        기사 주소를 붙여넣거나 통계 수치가 담긴 문장을 입력하세요
       </label>
       <div
         style={{
@@ -56,10 +65,16 @@ export function InputForm({ onSubmit, isLoading, onTipClick, onReset }: InputFor
       >
         <textarea
           id="au-content"
-          placeholder={'기사 주소를 붙여넣거나 통계 수치가 담긴 문장을 입력하세요…'}
+          placeholder={'검증할 기사 주소나 문장을 입력하세요'}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onFocus={() => setFocused(true)}
+          onChange={(e) => {
+            setContent(e.target.value)
+            setIsDefault(false)
+          }}
+          onFocus={(e) => {
+            setFocused(true)
+            if (isDefault) e.currentTarget.select() // 추천 텍스트는 포커스 시 전체 선택 → 첫 타이핑에 교체
+          }}
           onBlur={() => setFocused(false)}
           aria-invalid={!!error}
           rows={4}
@@ -75,7 +90,7 @@ export function InputForm({ onSubmit, isLoading, onTipClick, onReset }: InputFor
             fontFamily: 'var(--au-font-body)',
             fontSize: 15,
             lineHeight: 1.6,
-            color: 'var(--au-text)',
+            color: isDefault ? 'var(--au-text-muted)' : 'var(--au-text)',
           }}
         />
       </div>
