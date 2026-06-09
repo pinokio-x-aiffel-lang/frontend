@@ -266,6 +266,18 @@
   box-shadow: var(--au-shadow-elevated);
 }
 
+/* ── Debug 패널이 열리면 본문을 왼쪽으로 밀어 공간 확보 ──────────
+   넓은 화면(≥1100px)에서만 적용. 그보다 좁으면 패널이 92vw라 오버레이로
+   두고(접기 버튼으로 회피) 본문을 밀지 않는다. 패딩은 DebugPanel 폭(408px)과 동일. */
+[data-theme='aurora'] .theme-root {
+  transition: padding-right var(--au-duration) var(--au-ease);
+}
+@media (min-width: 1100px) {
+  [data-theme='aurora'] .theme-root.au-debug-open {
+    padding-right: 408px;
+  }
+}
+
 /* Aurora mesh background for hero */
 [data-theme='aurora'] .au-aurora {
   background:

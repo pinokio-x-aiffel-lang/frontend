@@ -6,6 +6,17 @@ import { authHeader } from '@/lib/api/token'
 
 type Status = 'idle' | 'loading' | 'done' | 'error'
 
+/** 디버그 패널이 시간순으로 그대로 보여주는 append-only 로그 한 줄(step 이벤트 1건) */
+export interface VerifyLog {
+  seq: number
+  step: number
+  name: string
+  status: PipelineStep['status']
+  duration_ms: number | null
+  error: string | null
+  t: number // 수신 시각(Date.now) — 패널에서 첫 줄 대비 경과시간 계산용
+}
+
 // VITE_USE_MOCK=true 이면 서버(SSE) 대신 mock.ts의 파이프라인을 한 step씩
 // 흘려보내 SSE를 흉내낸다. (백엔드/ngrok 없이도 Tip·제출 데모가 동작)
 const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true'
@@ -23,9 +34,30 @@ function putStep(prev: PipelineStep[], step: PipelineStep): PipelineStep[] {
 export function useVerifySSE() {
   const [status, setStatus] = useState<Status>('idle')
   const [steps, setSteps] = useState<PipelineStep[]>([])
+  const [logs, setLogs] = useState<VerifyLog[]>([])
   const [result, setResult] = useState<VerifyResponse | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const esRef = useRef<EventSource | null>(null)
+
+  // step 이벤트가 올 때마다 로그를 append (running→done 전이를 모두 보존한다)
+  const pushLog = (s: PipelineStep) =>
+    setLogs((prev) => [
+      ...prev,
+      {
+        seq: prev.length,
+        step: s.step,
+        name: s.name,
+        status: s.status,
+        duration_ms: s.duration_ms,
+        error: s.error ?? null,
+        t: Date.now(),
+      },
+    ])
+  const pushErrorLog = (message: string) =>
+    setLogs((prev) => [
+      ...prev,
+      { seq: prev.length, step: 0, name: '오류', status: 'error', duration_ms: null, error: message, t: Date.now() },
+    ])
   // 진행 중인 실행을 식별하는 토큰. reset()이나 새 verify() 호출 시 증가시켜
   // 이전 mock 실행이 뒤늦게 상태를 덮어쓰는 것을 막는다(mock엔 ES.close가 없음).
   const runIdRef = useRef(0)
@@ -36,6 +68,7 @@ export function useVerifySSE() {
 
     setStatus('loading')
     setSteps([])
+    setLogs([])
     setResult(null)
     setErrorMsg(null)
 
@@ -63,7 +96,9 @@ export function useVerifySSE() {
       ;({ job_id } = await res.json())
     } catch (err) {
       if (runIdRef.current !== myRun) return
-      setErrorMsg(err instanceof Error ? err.message : '알 수 없는 오류가 발생했어요')
+      const msg = err instanceof Error ? err.message : '알 수 없는 오류가 발생했어요'
+      setErrorMsg(msg)
+      pushErrorLog(msg)
       setStatus('error')
       return
     }
@@ -75,6 +110,7 @@ export function useVerifySSE() {
     es.addEventListener('step', (e) => {
       const data = JSON.parse(e.data) as PipelineStep
       setSteps((prev) => putStep(prev, data))
+      pushLog(data)
     })
 
     es.addEventListener('result', (e) => {
@@ -89,6 +125,7 @@ export function useVerifySSE() {
         ? (JSON.parse((e as MessageEvent).data) as { message: string }).message
         : '알 수 없는 오류가 발생했어요'
       setErrorMsg(msg)
+      pushErrorLog(msg)
       setStatus('error')
       es.close()
     })
@@ -115,11 +152,14 @@ export function useVerifySSE() {
       if (!active()) return
       // 실제로 수행된 step만 'running'을 먼저 보여준다(skipped/pending은 그대로).
       if (step.status === 'done' || step.status === 'error') {
-        setSteps((prev) => putStep(prev, { ...step, status: 'running', duration_ms: null }))
+        const running = { ...step, status: 'running' as const, duration_ms: null }
+        setSteps((prev) => putStep(prev, running))
+        pushLog(running)
         if (MOCK_DELAY) await sleep(350 + Math.random() * 300)
         if (!active()) return
       }
       setSteps((prev) => putStep(prev, step))
+      pushLog(step)
       if (MOCK_DELAY) await sleep(120)
     }
 
@@ -133,9 +173,10 @@ export function useVerifySSE() {
     runIdRef.current++ // 진행 중인 mock 루프 무효화
     setStatus('idle')
     setSteps([])
+    setLogs([])
     setResult(null)
     setErrorMsg(null)
   }
 
-  return { verify, reset, status, steps, result, errorMsg }
+  return { verify, reset, status, steps, logs, result, errorMsg }
 }

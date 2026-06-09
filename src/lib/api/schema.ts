@@ -116,6 +116,8 @@ export const pipelineStepSchema = z.object({
   name: z.string(),
   status: z.enum(['pending', 'running', 'done', 'skipped', 'error']),
   duration_ms: z.number().int().nullable(),
+  // 백엔드 StepEvent는 'error' 상태일 때 메시지를 함께 보낸다(디버그 로그용, 선택)
+  error: z.string().nullish(),
 })
 export type PipelineStep = z.infer<typeof pipelineStepSchema>
 

@@ -8,6 +8,7 @@ import type { VerifyRequest } from '@/lib/api/schema'
 import { InputForm, VERIFY_DRAFT_KEY } from './components/InputForm'
 import { PipelineProgress } from './components/PipelineProgress'
 import { ResultLayout } from './components/ResultLayout'
+import { DebugPanel } from './components/DebugPanel'
 
 import './tokens.css'
 
@@ -40,6 +41,7 @@ export default function AuroraApp() {
   const sse = useVerifySSE()
   const [mode, setMode] = useState<Mode>(getInitialMode)
   const showDebug = useDebugMode()
+  const [debugCollapsed, setDebugCollapsed] = useState(false)
   // 로그인 상태. 초기엔 토큰 유무로 낙관적 표시 → 마운트 후 /auth/me로 확정한다.
   const [user, setUser] = useState<User | null>(() => (getToken() ? { user_id: '' } : null))
 
@@ -106,7 +108,7 @@ export default function AuroraApp() {
 
   return (
     <div
-      className="theme-root"
+      className={`theme-root${showDebug && !debugCollapsed ? ' au-debug-open' : ''}`}
       style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--au-bg)' }}
     >
       {/* ── Nav ─────────────────────────────────────────────── */}
@@ -374,6 +376,20 @@ export default function AuroraApp() {
           </code>
         </div>
       </footer>
+
+      {/* ── Debug 패널 (우측 고정 · 단계별 실시간 로그) ───────── */}
+      {showDebug && (
+        <DebugPanel
+          logs={sse.logs}
+          status={sse.status}
+          currentStep={currentStep}
+          totalSteps={TOTAL_STEPS}
+          errorMsg={sse.errorMsg}
+          requestId={sse.result?.diagnostics?.request_id}
+          collapsed={debugCollapsed}
+          onToggleCollapsed={setDebugCollapsed}
+        />
+      )}
     </div>
   )
 }
