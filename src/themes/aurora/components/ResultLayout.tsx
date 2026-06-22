@@ -316,7 +316,12 @@ function ClaimRow({ index, result, claim }: { index: number; result: ClaimResult
   const unit = claim?.claim_info.unit ?? ''
   const subject = claim?.claim_info.subject ?? '주장'
   const view = VERDICT_VIEW[result.verdict]
-  const confPct = Math.round(result.confidence * 100)
+  // 증감(change_rate) claim은 '레벨'(kosis_value)이 아니라 비교가능한 증감값(computed_value)을
+  // 보여줘야 "기사 속 수치(+193,000)"와 정합한다.
+  const isChange = claim?.claim_info.claim_type === 'change_rate'
+  const officialRaw =
+    isChange && result.computed_value != null ? result.computed_value : result.kosis_value
+  const confLabel = result.confidence == null ? '—' : `${Math.round(result.confidence * 100)}%`
 
   return (
     <li className="au-card au-card-hoverable" style={{ overflow: 'hidden', padding: 0 }}>
@@ -359,14 +364,14 @@ function ClaimRow({ index, result, claim }: { index: number; result: ClaimResult
             marginBottom: 16,
           }}
         >
-          <NumberBlock label="기사 속 수치" value={result.claim_value || '—'} unit={unit} />
+          <NumberBlock label="기사 속 수치" value={fmtNumeric(result.claim_value, isChange)} unit={unit} />
           <span aria-hidden="true" style={{ fontFamily: 'var(--au-font-mono)', fontSize: 13, color: 'var(--au-text-faint)' }}>vs</span>
           <NumberBlock
             label="공식 통계"
             align="right"
-            value={result.kosis_value ?? '—'}
+            value={fmtNumeric(officialRaw, isChange)}
             unit={unit}
-            valueColor={result.kosis_value === null ? 'var(--au-text-faint)' : view.color}
+            valueColor={officialRaw == null ? 'var(--au-text-faint)' : view.color}
           />
         </div>
 
@@ -399,7 +404,7 @@ function ClaimRow({ index, result, claim }: { index: number; result: ClaimResult
             {subject}
           </span>
           <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <Pill label={`신뢰도 ${confPct}%`} />
+            <Pill label={`신뢰도 ${confLabel}`} />
             <Pill label={`근거 ${result.evidence.length}건`} />
             {result.mismatch_type && <Pill label={result.mismatch_type} tone="accent" />}
           </span>
@@ -520,7 +525,7 @@ function EvidenceCard({ ev }: { ev: Evidence }) {
         <dt className="au-overline">항목</dt>
         <dd style={{ margin: 0, color: 'var(--au-text)' }}>{ev.subject}</dd>
         <dt className="au-overline">기간</dt>
-        <dd className="au-num" style={{ margin: 0, fontFamily: 'var(--au-font-mono)' }}>{ev.period}</dd>
+        <dd className="au-num" style={{ margin: 0, fontFamily: 'var(--au-font-mono)' }}>{fmtPeriod(ev.period)}</dd>
         <dt className="au-overline">대상</dt>
         <dd style={{ margin: 0, color: 'var(--au-text)' }}>{ev.population}</dd>
         <dt className="au-overline">갱신</dt>
@@ -540,7 +545,7 @@ function EvidenceCard({ ev }: { ev: Evidence }) {
       >
         <span className="au-overline">공식 수치</span>
         <span className="au-num" style={{ fontFamily: 'var(--au-font-display)', fontSize: 20, fontWeight: 600, color: 'var(--au-text)' }}>
-          {String(ev.value)}
+          {fmtNumeric(String(ev.value))}
         </span>
         <span style={{ fontSize: 12, color: 'var(--au-text-muted)' }}>{ev.unit}</span>
       </div>
@@ -754,4 +759,19 @@ function formatDate(iso: string | null): string {
 function excerpt(text: string, max: number): string {
   if (text.length <= max) return text
   return text.slice(0, max).trimEnd() + '…'
+}
+
+/** 수치 문자열 표시 정규화: 천단위 구분 + 소수 정리 + (증감이면) 부호. 숫자가 아니면 원문. */
+function fmtNumeric(raw: string | null, signed = false): string {
+  if (raw == null || raw === '') return '—'
+  const n = Number(String(raw).replace(/,/g, '').trim())
+  if (!Number.isFinite(n)) return String(raw)
+  const body = Math.abs(n).toLocaleString('ko-KR', { maximumFractionDigits: 1 })
+  return (n < 0 ? '−' : signed ? '+' : '') + body
+}
+
+/** 기간 표시 정규화: 202503 → 2025-03 (그 외 포맷은 그대로). */
+function fmtPeriod(p: string): string {
+  const m = /^(\d{4})(\d{2})$/.exec(p)
+  return m ? `${m[1]}-${m[2]}` : p
 }
