@@ -49,7 +49,7 @@ export const claimInfoSchema = z.object({
   subject: z.string(),
   claim_type: z.string(),
   claim_value: z.string(),
-  normalized_value: z.string(),
+  normalized_value: z.string().nullable(),
   unit: z.string(),
   period: z.string(),
   compare_period: z.string().nullable(),
@@ -74,8 +74,12 @@ export const evidenceSchema = z.object({
   period: z.string(),
   population: z.string(),
   table_name: z.string(),
-  url: z.string(),
+  url: z.string().nullable(),
   last_updated: z.string(),
+  // 백엔드 추가(증감 비교근거·매칭 품질) — 없을 수 있음
+  compare_value: z.string().nullable().optional(),
+  compare_period: z.string().nullable().optional(),
+  population_fallback: z.boolean().optional(),
 })
 export type Evidence = z.infer<typeof evidenceSchema>
 
@@ -87,8 +91,11 @@ export const claimResultSchema = z.object({
   claim_value: z.string(),
   kosis_value: z.string().nullable(),
   explanation: z.string(),
-  confidence: z.number().min(0).max(1),
+  confidence: z.number().min(0).max(1).nullable(),
   evidence: z.array(evidenceSchema),
+  // 백엔드 추가 — 증감(change_rate) claim의 비교가능 산출값. 없을 수 있음.
+  computed_value: z.string().nullable().optional(),
+  within_tolerance: z.boolean().nullable().optional(),
 })
 export type ClaimResult = z.infer<typeof claimResultSchema>
 
