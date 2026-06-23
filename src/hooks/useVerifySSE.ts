@@ -85,7 +85,7 @@ export function useVerifySSE() {
         method: 'POST',
         // /verify는 로그인 필요(Bearer) — 저장된 토큰을 Authorization 헤더로 부착
         headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true', ...authHeader() },
-        body: JSON.stringify({ content: req.content }),
+        body: JSON.stringify({ content: req.content, published_at: req.published_at }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))

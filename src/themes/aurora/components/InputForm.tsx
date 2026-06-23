@@ -28,6 +28,8 @@ export function InputForm({ onSubmit, isLoading, onTipClick, onReset }: InputFor
   const [isDefault, setIsDefault] = useState(() => readDraft().length === 0)
   const [error, setError] = useState<string | null>(null)
   const [focused, setFocused] = useState(false)
+  // 기사 발행일(선택). 본문 입력 시 '지난달/전년' 등 상대 시점 정규화의 기준일.
+  const [publishedAt, setPublishedAt] = useState('')
 
   // 로그인 왕복 후 복원한 초안은 한 번만 쓰고 비운다 (이후 마운트에서 옛 텍스트가 다시 뜨지 않도록)
   useEffect(() => {
@@ -36,7 +38,10 @@ export function InputForm({ onSubmit, isLoading, onTipClick, onReset }: InputFor
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    const parsed = verifyRequestSchema.safeParse({ content })
+    const parsed = verifyRequestSchema.safeParse({
+      content,
+      published_at: publishedAt.trim() || undefined,
+    })
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? '입력값을 확인해주세요')
       return
@@ -94,6 +99,30 @@ export function InputForm({ onSubmit, isLoading, onTipClick, onReset }: InputFor
           }}
         />
       </div>
+
+      {/* 발행일(선택) — 본문 입력 시 '지난달/전년' 등 상대 시점의 기준. 미입력 시 백엔드가 웹서치로 추정 */}
+      <label
+        htmlFor="au-published-at"
+        style={{ display: 'block', marginTop: 14, marginBottom: 6, fontSize: 13, color: 'var(--au-text-muted)' }}
+      >
+        기사 발행일 <span style={{ opacity: 0.7 }}>(선택 · 미입력 시 자동 검색)</span>
+      </label>
+      <input
+        id="au-published-at"
+        type="date"
+        value={publishedAt}
+        onChange={(e) => setPublishedAt(e.target.value)}
+        style={{
+          padding: '8px 12px',
+          background: 'var(--au-surface)',
+          border: '1px solid var(--au-border)',
+          borderRadius: 'var(--au-radius)',
+          color: 'var(--au-text)',
+          fontFamily: 'var(--au-font-mono)',
+          fontSize: 14,
+          colorScheme: 'dark',
+        }}
+      />
 
       <div
         style={{

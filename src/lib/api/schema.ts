@@ -174,5 +174,7 @@ export const verifyRequestSchema = z.object({
     .string()
     .trim()
     .min(1, '기사 URL 또는 본문을 입력해주세요'),
+  // 기사 발행일(YYYY-MM-DD, 선택). 본문 입력 시 상대 시점 정규화 기준. 미입력 시 백엔드가 웹서치로 추정.
+  published_at: z.string().optional(),
 })
 export type VerifyRequest = z.infer<typeof verifyRequestSchema>
