@@ -416,7 +416,7 @@ function ClaimRow({ index, result, claim }: { index: number; result: ClaimResult
             {result.evidence.map((ev, i) => (
               <a
                 key={i}
-                href={ev.url}
+                href={ev.url ?? undefined}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -550,7 +550,7 @@ function EvidenceCard({ ev }: { ev: Evidence }) {
         <span style={{ fontSize: 12, color: 'var(--au-text-muted)' }}>{ev.unit}</span>
       </div>
 
-      <a href={ev.url} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--au-font-mono)', fontSize: 12 }}>
+      <a href={ev.url ?? undefined} target="_blank" rel="noopener noreferrer" style={{ fontFamily: 'var(--au-font-mono)', fontSize: 12 }}>
         통계청에서 보기 →
       </a>
     </article>

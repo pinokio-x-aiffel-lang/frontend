@@ -860,7 +860,7 @@ function buildResponse({
   const avg =
     total === 0
       ? 0
-      : claim_results.reduce((sum, r) => sum + r.confidence, 0) / total
+      : claim_results.reduce((sum, r) => sum + (r.confidence ?? 0), 0) / total
   const overall = deriveOverallVerdict(claim_results) as VerifyResponse['verifications']['summary']['overall_verdict']
 
   return {
